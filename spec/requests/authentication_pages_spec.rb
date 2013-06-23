@@ -19,7 +19,9 @@ describe "AuthenticationPages" do
 
       it { should have_title('Sign in') }
       it { should have_error_message('Invalid') }
-    
+      it { should_not have_link('Profile') }
+      it { should_not have_link('Settings') }
+
       describe "after visiting another page" do
         before { click_link "Home" }
         it { should_not have_selector('div.alert.alert-error') }
@@ -50,7 +52,20 @@ describe "AuthenticationPages" do
 
   describe "authorization" do
  
- 
+    describe "for signed in users" do
+      let(:user) { FactoryGirl.create(:user) }
+      before { sign_in user }
+
+      describe "using a 'new' action" do
+        before { get new_user_path }
+        specify { response.should redirect_to(root_path) }
+      end
+
+      describe "using a 'create' action" do
+        before { post users_path }
+        specify { response.should redirect_to(root_url) }
+      end
+    end 
  
     describe "as non-admin user" do
       let(:user) { FactoryGirl.create(:user) }
@@ -97,6 +112,44 @@ describe "AuthenticationPages" do
           it { should have_title('Sign in') }
         end
       end
+
+      describe "when attempting to visit a protected page" do
+        before do
+          visit edit_user_path(user)
+          valid_signin(user)
+        end
+
+        describe "after signing in" do
+          it "should render the desired protected page" do
+            page.should have_title('Edit user')
+          end
+
+          describe "when signing in again" do
+            before do
+              delete signout_path
+              visit signin_path
+              valid_signin(user)
+            end
+
+            it "should render the default (profile) page" do
+              page.should have_title(user.name)
+            end
+          end
+        end
+      end
+
+      describe "in the Micropost controller" do
+        
+        describe "submitting to the create action" do
+          before { post microposts_path }
+          specify { response.should redirect_to(signin_path) }
+        end
+
+        describe "submitting to the destroy action" do
+          before { delete micropost_path(FactoryGirl.create(:micropost)) }
+          specify { response.should redirect_to(signin_path) }
+        end
+      end
     end
 
     describe "as wrong user" do
@@ -114,5 +167,21 @@ describe "AuthenticationPages" do
         specify { response.should redirect_to(root_url) }
       end
     end
+  end
+
+  describe "as admin user" do
+    let(:admin) { FactoryGirl.create(:admin) }
+    before do
+      visit signin_path
+      valid_signin admin
+    end
+
+    describe "admin should not be able to delete him/herself by submitting a DELETE request" do
+      specify do
+        expect { delete user_path(admin) }.to_not change(User, :count).by(-1)
+      end
+    end
+
+
   end
 end
