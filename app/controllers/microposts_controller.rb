@@ -15,7 +15,7 @@ class MicropostsController < ApplicationController
 
   def destroy
     @micropost.destroy
-    redriect_to root_url
+    redirect_to root_url
   end
 
   private

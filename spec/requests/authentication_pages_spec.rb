@@ -65,6 +65,31 @@ describe "AuthenticationPages" do
         before { post users_path }
         specify { response.should redirect_to(root_url) }
       end
+    
+      describe "micropost feed" do
+        let!(:m1) { FactoryGirl.create(:micropost, user: user, content: "TEST") }
+        it "should have 1 micropost" do
+          visit root_url
+          page.should have_content('1 micropost')
+        end
+        
+        describe "can display multiple microposts" do
+          let!(:m2) { FactoryGirl.create(:micropost, user: user, content: "TEST2") }
+          
+          it "should have 2 microposts" do
+            visit root_url
+            page.should have_content('2 microposts')
+          end
+        end
+      end
+
+      describe "pagination" do
+        it "should paginate the feed" do
+          31.times { FactoryGirl.create(:micropost, user: user, content: "Consectetur adiposcing elit") }
+          visit root_path
+          page.should have_selector('div.pagination')
+        end
+      end
     end 
  
     describe "as non-admin user" do
